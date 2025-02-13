@@ -1,23 +1,25 @@
 from datetime import timedelta, datetime
-
+from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 from Dbs.DataBaseSetting.DatabaseConfig import get_async_db
+from Dbs.DataBaseSetting.redis import add_jit_to_blocklist
 from Dbs.Schemas.modelSchemas import  UserCreate, LoginData, Response
 from auth.auth_Service import create_user, get_users
-from auth.dependencies import TokenBearer, AccessTokenBearer
-from auth.utils import verify_password_hash, create_access_token
+from auth.dependencies import TokenBearer, AccessTokenBearer, RefreshTokenBearer
+from auth.utils import verify_password_hash, create_access_token, decode_token
 
 router = APIRouter()
-acceess = TokenBearer()
-hh = AccessTokenBearer()
+
 
 exp_time = 1
 
 
 
 @router.post("/Signup", response_model=Response, status_code=201)
-async def create_user_endpoint(user: UserCreate,_user_detail=Depends(acceess),db: AsyncSession = Depends(get_async_db)):
+async def create_user_endpoint(user: UserCreate,db: AsyncSession = Depends(get_async_db)):
      User = await create_user(user, db)
      if User is None:
          raise HTTPException(status_code=404, detail="User not found")
@@ -57,12 +59,39 @@ async def login(Data : LoginData, db: AsyncSession = Depends(get_async_db)):
 
 
 @router.get("/hello")
-async def hello(_user_detail=Depends(hh)):
+async def hello(_user_detail=Depends(AccessTokenBearer())):
     return {
         "hello": "world"
     }
 
+@router.get("/access_token")
+async def new_token_for_access(token_deta:HTTPAuthorizationCredentials=Depends(RefreshTokenBearer())):
 
+      token_details = decode_token(token_deta.credentials)
+
+      if datetime.fromtimestamp(token_details["exp"]) > datetime.now():
+          new_access_token = create_access_token(token_details)
+          return {
+              "access_token": new_access_token
+          }
+
+      raise HTTPException(status_code=404, detail="Incorrect token or expired")
+
+@router.get("/loggout")
+async def revoked_token(token_details:HTTPAuthorizationCredentials = Depends(AccessTokenBearer())):
+
+    decoded_token = decode_token(token_details.credentials)
+
+    jit = decoded_token["jti"]
+
+    await add_jit_to_blocklist(jti=jit)
+
+    return JSONResponse(
+        content={
+            "message": "logged out",
+        },
+        status_code=HTTPStatus.OK
+    )
 
 
 

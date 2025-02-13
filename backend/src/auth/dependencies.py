@@ -1,9 +1,11 @@
+
 from fastapi.security import HTTPBearer
 from fastapi.security.http import  HTTPAuthorizationCredentials
 from fastapi import Request
 
+from Dbs.DataBaseSetting.redis import get_jit_to_blocklist
 from auth.utils import decode_token
-from fastapi.exceptions import HTTPException
+from fastapi import HTTPException
 
 
 class TokenBearer(HTTPBearer):
@@ -21,8 +23,16 @@ class TokenBearer(HTTPBearer):
         token_data = decode_token(token)
 
         if not self.token_valid(token):
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+            raise HTTPException(status_code=401, detail={
+                "error": "this token is invalid or expired",
+                "resolution": "Please get new token"
+            })
 
+        if await get_jit_to_blocklist(token_data["jti"]):
+            raise HTTPException(status_code=401, detail={
+                "error":"This token is invalid or has been revoked",
+                "resolution":"Please get new token"
+            })
 
         self.verify_token(token_data)
 
@@ -42,10 +52,9 @@ class TokenBearer(HTTPBearer):
 
 class AccessTokenBearer(TokenBearer):
 
-
       def verify_token(self, token_data:dict):
           if token_data and token_data["refresh"]:
-              raise HTTPException(status_code=401, detail="provide access token")
+              raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 class RefreshTokenBearer(TokenBearer):
