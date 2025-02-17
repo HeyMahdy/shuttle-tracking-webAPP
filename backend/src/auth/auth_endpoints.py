@@ -8,7 +8,7 @@ from Dbs.DataBaseSetting.DatabaseConfig import get_async_db
 from Dbs.DataBaseSetting.redis import add_jit_to_blocklist
 from Dbs.Schemas.modelSchemas import  UserCreate, LoginData, Response
 from auth.auth_Service import create_user, get_users
-from auth.dependencies import TokenBearer, AccessTokenBearer, RefreshTokenBearer
+from auth.dependencies import  AccessTokenBearer, RefreshTokenBearer
 from auth.utils import verify_password_hash, create_access_token, decode_token
 
 router = APIRouter()
