@@ -1,115 +1,92 @@
 import typing
-import strawberry
+
 from fastapi import FastAPI, Depends
+from starlette.websockets import WebSocketDisconnect
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from Dbs.DataBaseSetting.DatabaseConfig import get_async_db
-from Dbs.Models.models import practiceDB
 from auth.auth_endpoints import router as auth_router
 
 app = FastAPI()
 
 app.include_router(auth_router)
 
-import strawberry
 
-from fastapi import FastAPI
-from strawberry.fastapi import GraphQLRouter
+from fastapi import  WebSocket
+from fastapi.responses import HTMLResponse
 
-async def get_context(
-    db: AsyncSession = Depends(get_async_db),
-):
-    return {
-        "custom_value": db,
-    }
+app = FastAPI()
 
-
-@strawberry.type
-class USU:
-    name: str
-    work:str
-
-@strawberry.input
-class UpdateFruitWeightInput:
-    name: str
-    work: str
-
-
-@strawberry.type
-class Mutation:
-    @strawberry.mutation
-    async def update_fruit_weight(self, input: UpdateFruitWeightInput,info: strawberry.Info) -> USU:
-        # Access the fields from the input
-        name = input.name
-        work = input.work
-
-        session: AsyncSession = info.context['custom_value']
-        p1 = practiceDB(name=name, work=work)
-        session.add(p1)
-        await session.commit()
-        await session.refresh(p1)
-
-        return USU(name=p1.name, work=p1.work)
-
-
-@strawberry.type
-class Query:
-    @strawberry.field
-    async def hello(self)->str:
-        return "Hello World!"
+html = """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button>Send</button>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/ws");
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>
+"""
 
 
+class ConnectManager:
 
-schema = strawberry.Schema(query=Query,mutation=Mutation)
+    def __init__(self):
+        self.active_websocket : list[WebSocket] = []
 
-graphql_app = GraphQLRouter(
-    schema,
-    path="/graphql",
-    context_getter=get_context,
-)
-
-app.include_router(graphql_app)
+    async def Connect(self,websocket: WebSocket):
+        await websocket.accept()
+        self.active_websocket.append(websocket)
 
 
+    async def Disconnect(self,websocket: WebSocket):
+        self.active_websocket.remove(websocket)
+
+    async def Send(self, message:str,websocket: WebSocket ):
+        await websocket.send_text(message)
+
+    async def broadcast(self,message:str):
+        for websocket in self.active_websocket:
+            await websocket.send_text(message)
 
 
+connectmanager = ConnectManager()
+
+@app.get("/")
+async def get():
+    return HTMLResponse(html)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+     await connectmanager.Connect(websocket)
+     try:
+         while True:
+            message = await websocket.receive_text()
+            await connectmanager.broadcast(message)
+     except WebSocketDisconnect:
+          await connectmanager.Disconnect(websocket)
 
 
 
