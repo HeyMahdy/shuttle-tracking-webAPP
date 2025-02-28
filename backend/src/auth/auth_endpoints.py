@@ -41,6 +41,10 @@ async def login(Data : LoginData, db: AsyncSession = Depends(get_async_db)):
         raise HTTPException(status_code=404, detail="Incorrect password")
 
 
+
+    
+
+
     payload = {
         "email": user.email,
         "uuid": str(user.id)
@@ -60,6 +64,10 @@ async def login(Data : LoginData, db: AsyncSession = Depends(get_async_db)):
 
 @router.get("/hello")
 async def hello(_user_detail=Depends(AccessTokenBearer())):
+
+
+
+
     return {
         "hello": "world"
     }

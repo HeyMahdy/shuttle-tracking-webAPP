@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
@@ -7,9 +9,9 @@ from enum import Enum
 
 class UserRole(str, Enum):
     ADMIN = "admin"
-    USER = "user" 
-    MANAGER = "manager"
-    VISITOR = "visitor"
+    STUDENT = "student"
+    DRIVER = "driver"
+
 
 class UserBase(BaseModel):
     """Base user model for common attributes"""
@@ -20,7 +22,7 @@ class UserBase(BaseModel):
         max_length=50, 
         description="Username must be between 3 and 50 characters"
     )
-    role: UserRole = UserRole.USER
+    role: UserRole
     is_active: bool = True
     is_verified: bool = False
     model_config = {
@@ -75,3 +77,7 @@ class LoginData(BaseModel):
     email : str
     password : str
 
+class Location(BaseModel):
+    driverId : uuid.UUID
+    latitude: float
+    longitude: float

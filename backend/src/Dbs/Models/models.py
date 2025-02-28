@@ -34,12 +34,7 @@ class MainUser(ModelBase):
         onupdate=text("now()")
     )
 
-class practiceDB(ModelBase):
-    __tablename__ = "practiceDB"
 
-    id : Mapped[int] = mapped_column(index=True , primary_key=True,autoincrement=True)
-    name : Mapped[str] = mapped_column(String)
-    work : Mapped[str] = mapped_column(String)
 
 
     

@@ -22,6 +22,7 @@ class TokenBearer(HTTPBearer):
 
         token_data = decode_token(token)
 
+
         if not self.token_valid(token):
             raise HTTPException(status_code=401, detail={
                 "error": "this token is invalid or expired",

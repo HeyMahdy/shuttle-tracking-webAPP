@@ -1,5 +1,7 @@
-
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from Dbs.DataBaseSetting.DatabaseConfig import get_async_db
 from Dbs.Models.models import MainUser
 from Dbs.Schemas.modelSchemas import UserCreate
 from sqlalchemy.future import select
@@ -20,4 +22,7 @@ async def get_users(email: str, db: AsyncSession):
     user = result.scalar_one_or_none()
     return user
 
-
+async def get_role_by_email(email: str, db: AsyncSession):
+    result = await db.execute(select(MainUser.role).where(MainUser.email == email))
+    role = result.scalar_one_or_none()
+    return role
