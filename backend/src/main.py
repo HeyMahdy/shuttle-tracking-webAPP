@@ -34,12 +34,11 @@ class ConnectManager:
         await websocket.accept()
         self.active_websocket_student.add(websocket)
 
+    async def DisconnectStudent(self,websocket: WebSocket):
+        self.active_websocket_student.remove(websocket)
 
-    async def Disconnect(self,websocket: WebSocket):
+    async def DisconnectDriver(self,websocket: WebSocket):
         self.active_websocket_driver.remove(websocket)
-
-    async def Send(self, message:str,websocket: WebSocket ):
-        await websocket.send_text(message)
 
     async def broadcast(self,message:dict):
         for websocket in self.active_websocket_student:
@@ -69,7 +68,10 @@ async def websocket_endpoint(websocket: WebSocket , token : str = Query(...),db:
             message = await websocket.receive_json()
             await connectmanager.broadcast(message)
      except WebSocketDisconnect:
-          await connectmanager.Disconnect(websocket)
+         if role == "driver":
+           await connectmanager.DisconnectDriver(websocket)
+         elif role == "student":
+           await connectmanager.DisconnectStudent(websocket)
 
 
 
